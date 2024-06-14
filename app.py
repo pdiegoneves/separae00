@@ -55,34 +55,49 @@ col1, col2 = st.columns([1, 11])
 col1.image("./assets/logo.svg")
 col2.write("<h1 style='text-align: center;'>E00 - Transferências para lojas</h1>", unsafe_allow_html=True)
 
-file = st.file_uploader("Escolha o arquivo", type="xlsx")
+
+file = st.file_uploader("Selecione o arquivo", type=["xlsx"])
 
 if file:
-    df = pd.read_excel(file, header=1, dtype="object")
-    df["Deposito"] = df["Endereco"].apply(lambda x: definir_deposito(x))
-    df["Nivel"] = df["Endereco"].apply(lambda x: definir_nivel(x))
-    df = df.groupby(["Nivel", "Deposito"]).size().reset_index(name="qtd")
-    df.set_index("Nivel", inplace=True)
-    df_pivot = df.pivot_table(index='Nivel', columns='Deposito', values='qtd', aggfunc='sum')
-    df_pivot.fillna(0, inplace=True)
-    df_pivot.replace({np.nan: 0}, inplace=True)
-    df_pivot = df_pivot.astype(int)
-    df_pivot["Total"] = df_pivot.sum(axis=1)
-    df_pivot.loc['Totais'] = df_pivot.sum()
+
+    col1, col2 = st.columns(2)
+
+    selected_visao = col1.radio("Selecione a visão", ["Transferência", "Cliente"], horizontal=True)
 
     col1 , col2 = st.columns(2)
-    
-    with col1:
-        col1_1, col1_2 = st.columns([1, 4])
-        col1_1.image("./assets/logo.svg")
-        col1_2.subheader("Separação de E00")
-        st.dataframe(df_pivot, use_container_width=True)
 
-    with col2:
-        st.subheader("Total de E00 por Nível")
-        df_bar = df_pivot.drop(["Totais"], axis=0) 
-        st.bar_chart(df_bar.reset_index(), x="Nivel", y = "Total")
+    if selected_visao == "Transferência":
+        df = pd.read_excel(file, header=1, dtype="object")
+        df["Deposito"] = df["Endereco"].apply(lambda x: definir_deposito(x))
+        df["Nivel"] = df["Endereco"].apply(lambda x: definir_nivel(x))
+        df_por_nivel = df.groupby(["Nivel", "Deposito"]).size().reset_index(name="qtd")
+        df_por_nivel.set_index("Nivel", inplace=True)
+        df_pivot = df_por_nivel.pivot_table(index='Nivel', columns='Deposito', values='qtd', aggfunc='sum')
+        df_pivot.fillna(0, inplace=True)
+        df_pivot.replace({np.nan: 0}, inplace=True)
+        df_pivot = df_pivot.astype(int)
+        df_pivot["Total"] = df_pivot.sum(axis=1)
+        df_pivot.loc['Totais'] = df_pivot.sum()
+        with col1:
+            col1_1, col1_2 = st.columns([1, 4])
+            col1_1.image("./assets/logo.svg")
+            col1_2.subheader("Separação E00")
+            st.table(df_pivot)
+    elif selected_visao == "Cliente":
+        df = pd.read_excel(file, header=1, dtype="object")
+        df["Deposito"] = df["Endereco"].apply(lambda x: definir_deposito(x))
+        df_por_carga = df.groupby(["Carga", "Deposito"]).size().reset_index(name="qtd")
+        df_por_carga.set_index("Carga", inplace=True)
+        df_pivot_por_carga = df_por_carga.pivot_table(index='Carga', columns='Deposito', values='qtd', aggfunc='sum')
+        df_pivot_por_carga.fillna(0, inplace=True)
+        df_pivot_por_carga.replace({np.nan: 0}, inplace=True)
+        df_pivot_por_carga = df_pivot_por_carga.astype(int)
+        df_pivot_por_carga["Total"] = df_pivot_por_carga.sum(axis=1)
+        df_pivot_por_carga.loc['Totais'] = df_pivot_por_carga.sum()
 
-
-    df_bar = df_pivot.drop(["Total"], axis=1).T
-    st.bar_chart(df_bar.reset_index(), x="Deposito", y = "Totais")
+        with col1:
+            col1_1, col1_2 = st.columns([1, 4])
+            col1_1.image("./assets/logo.svg")
+            col1_2.subheader("Separação Clientes")
+            st.table(df_pivot_por_carga)    
+        
